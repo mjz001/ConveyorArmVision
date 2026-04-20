@@ -11,6 +11,7 @@ class SegModel:
         self.contour_list = []
         self.class_names = class_names
 
+    #模型推理
     def detect(self, frame):
         contour_list = []
         results = self.model(frame, conf=self.conf_threshold)
@@ -28,7 +29,7 @@ class SegModel:
                 self.contour_list = contour_list
         return bboxes
 
-    # ====================== 已修改：轮廓固定红色，框不红色 ======================
+    # =====================绘制检测框和目标轮廓等信息====
     def draw_tracked_boxes(self, frame, tracked_bboxes, contour_list, cls_id):
         font = cv2.FONT_HERSHEY_SIMPLEX
         font_scale = 0.5
@@ -76,6 +77,7 @@ class SegModel:
 
         return frame
 
+    #计算两个框的IoU
     def box_iou(self, box1, box2):
         x1_pred, y1_pred, x2_pred, y2_pred = box1
         w_pred = x2_pred - x1_pred
@@ -98,6 +100,7 @@ class SegModel:
         union_area = box1_area + box2_area - inter_area
         return inter_area / union_area if union_area > 0 else 0
 
+    #对检测框和追踪框匹配
     def match_boxes(self, pre_boxes, tracker_bboxes, match_iou=0.5):
         cost_matrix = np.zeros((len(pre_boxes), len(tracker_bboxes)))
         
@@ -121,6 +124,7 @@ class SegModel:
 
         return match_pre_indices, match_tracker_indices, match_pairs
 
+    #获取匹配到的目标轮廓
     def match_contours(self, pred_bboxes, tracker_bboxes, iou=0.5):
         contour_list = []
         match_cls_id = []

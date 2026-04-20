@@ -2,11 +2,14 @@ import numpy as np
 from deep_sort_pytorch.deep_sort import DeepSort
 from deep_sort_pytorch.utils.parser import get_config
 
+
+#集成前后处理以及实例化追踪器的封装类
 class DeepSORTTracker:
     def __init__(self):
         cfg = get_config()
         cfg.merge_from_file("deep_sort_pytorch/configs/deep_sort.yaml")
 
+        #初始化追踪器
         self.deepsort = DeepSort(
             cfg.DEEPSORT.REID_CKPT,
             max_dist=cfg.DEEPSORT.MAX_DIST,
@@ -26,9 +29,9 @@ class DeepSORTTracker:
         h = y2 - y1
         return cx, cy, w, h
 
-    # ==============================================
-    # 这里！接收 bboxes 和 frame（图像）
-    # ==============================================
+    
+    # 处理boxes 和 frame（图像），执行追踪器的更新操作
+    
     def update(self, bboxes, img):
         if len(bboxes) == 0:
             self.deepsort.increment_ages()
@@ -45,8 +48,7 @@ class DeepSORTTracker:
         xywhs = np.array(xywhs)
         confs = np.array(confs)
 
-        # ==============================================
-        # 标准 DeepSORT 3 个参数！
-        # ==============================================
+       
+        #追踪器更新
         outputs = self.deepsort.update(xywhs, confs, img)
         return outputs

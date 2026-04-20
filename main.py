@@ -1,13 +1,20 @@
 import os
+
+#允许windows重复加载dll加速工具包
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+#omp设置并行计算的线程数
 os.environ["OMP_NUM_THREADS"] = "1"
+#mkl数学计算加速库内部的线程数
 os.environ["MKL_NUM_THREADS"] = "1"
 import cv2
 from seg_model import SegModel
 from tracker import DeepSORTTracker
 import yaml
+from pathlib import Path
+import argparse
 
-model_path = "./model/best.pt"
+    
+
 
 #获取类名映射
 def get_class_names(yaml_path="config/class_name.yaml"):
@@ -15,12 +22,13 @@ def get_class_names(yaml_path="config/class_name.yaml"):
         data = yaml.safe_load(f)
     return data.get('class_names', None)
 
-def main():
+def main(args):
     # ==================  初始化 ==================
-    class_names = get_class_names()
-    print(f"加载模型: yolov8n-seg.pt")
+    class_names = get_class_names(args.class_name_yaml)
+    
+    print(f"加载模型: {args.yolo_weights}")
     try:
-        seg_model = SegModel(model_path="yolov8n-seg.pt", class_names=class_names)
+        seg_model = SegModel(model_path=args.yolo_weights, class_names=class_names)
     except Exception as e:
         print(f"加载模型失败: {e}")
         return
@@ -28,7 +36,7 @@ def main():
     tracker = DeepSORTTracker()
 
     # ================== 打开视频流 ==================
-    video_path = "test.mp4"  # 0=摄像头，也可以填视频路径   
+    video_path = args.video_path  # 填0为摄像头，也可以填视频路径   
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         print("视频打开失败")
@@ -41,7 +49,8 @@ def main():
     
     # ==================  初始化视频保存 ==================
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # 编码格式
-    out = cv2.VideoWriter("output_tracking.mp4", fourcc, fps, (width, height))
+    output_video_path = Path(args.output_dir) / "output_tracking.mp4"
+    out = cv2.VideoWriter(str(output_video_path), fourcc, fps, (width, height))
 
     # ==================  循环读取帧 ==================
     try:
@@ -68,7 +77,7 @@ def main():
 
             # 显示
             cv2.imshow("Tracking", frame)
-            if cv2.waitKey(1) == 27:
+            if cv2.waitKey(10) == 27:
                 break
     except Exception as e:
         print(f"error: {e}")
@@ -80,5 +89,15 @@ def main():
         cv2.destroyAllWindows()
         exit(0)
 
+
+
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--yolo_weights', type=str, default='models/yolov8n-seg.pt', help='model.pt path')
+    parser.add_argument('--video_path',type=str,default='test.mp4',help='path to input video')
+    parser.add_argument('--class_name_yaml', type=str, default='config/class_name.yaml', help='path to class name yaml')
+    parser.add_argument('--output_dir', type=str, default='output', help='directory to save output video')
+    args = parser.parse_args()
+    os.makedirs(args.output_dir, exist_ok=True)
+    main(args)
