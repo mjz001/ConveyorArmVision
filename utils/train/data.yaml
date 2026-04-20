@@ -1,0 +1,4 @@
+train: /home/T7/zmj/机器臂实时抓取传送带货物系统/data/boxes_parcels_det_data/train/images
+val: /home/T7/zmj/机器臂实时抓取传送带货物系统/data/boxes_parcels_det_data/test/images
+nc: 2
+names: ['box', 'parcel']
