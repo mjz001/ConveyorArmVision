@@ -22,6 +22,7 @@ class DeepSORTTracker:
             use_cuda=True
         )
 
+
     def xyxy_to_xywh(self, x1, y1, x2, y2):
         cx = (x1 + x2) / 2
         cy = (y1 + y2) / 2

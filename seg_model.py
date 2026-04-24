@@ -21,6 +21,7 @@ class SegModel:
                 x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
                 conf = box.conf[0].cpu().numpy()
                 cls = box.cls[0].cpu().numpy()
+                #cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (255,0,0), 2)
                 bboxes.append([x1, y1, x2, y2, conf, cls])
             if result.masks is not None and len(result.masks.xy) > 0:
                 contour_list = result.masks.xy
@@ -72,7 +73,8 @@ class SegModel:
 
             # 轮廓 固定 红色 (0,0,255)
             if i < len(contour_list):
-                cnt = contour_list[i].astype(np.int32)
+                # 确保contour_list中的元素是numpy数组
+                cnt = np.array(contour_list[i]).astype(np.int32) if not isinstance(contour_list[i], np.ndarray) else contour_list[i].astype(np.int32)
                 cv2.drawContours(frame, [cnt], -1, (0, 0, 255), 2)
 
         return frame
@@ -125,6 +127,7 @@ class SegModel:
         return match_pre_indices, match_tracker_indices, match_pairs
 
     #获取匹配到的目标轮廓
+    #iou不应该太高，因为检测框和更新框可能有较大的形变
     def match_contours(self, pred_bboxes, tracker_bboxes, iou=0.5):
         contour_list = []
         match_cls_id = []
@@ -136,6 +139,41 @@ class SegModel:
 
         for i, j, _ in match_pairs:
             if i < len(self.contour_list):
-                contour_list.append(self.contour_list[i])
+                # 确保轮廓不包含numpy数组，而是转换为Python原生类型
+                contour = self.contour_list[i].tolist() if isinstance(self.contour_list[i], np.ndarray) else self.contour_list[i]
+                contour_list.append(contour)
                 match_cls_id.append(pred_cls_id[i])
         return contour_list, match_cls_id
+    def export_onnx(self, output_path="./weights/model.onnx", batch=1, dynamic=True, half=True, simplify=True, imgsz=(640, 640)):
+        """
+        将模型导出为ONNX格式
+        
+        Args:
+            output_path: ONNX模型保存路径
+            dynamic: 是否使用动态尺寸
+            half: 是否使用半精度浮点数
+            simplify: 是否简化模型
+            imgsz: 输入图像尺寸 (height, width)
+        """
+        import os
+        from ultralytics.utils import ASSETS, ROOT, SETTINGS
+        
+        # 确保输出目录存在
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
+        # 导出模型
+        success = self.model.export(
+            format='onnx',
+            dynamic=dynamic,
+            half=half,
+            batch=batch,
+            imgsz=list(imgsz),  # 将元组转换为列表
+            simplify=simplify,
+            nms=True,
+            opset=11,
+            device=0
+        )
+        
+        print(f"ONNX模型已导出到: {output_path}")
+        print(f"模型输入尺寸: {imgsz}, 动态尺寸: {dynamic}")
+        return success

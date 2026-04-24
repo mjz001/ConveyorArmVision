@@ -12,8 +12,9 @@ from tracker import DeepSORTTracker
 import yaml
 from pathlib import Path
 import argparse
+import time
 
-    
+
 
 
 #获取类名映射
@@ -49,8 +50,17 @@ def main(args):
     
     # ==================  初始化视频保存 ==================
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # 编码格式
-    output_video_path = Path(args.output_dir) / "output_tracking.mp4"
+    if Path(args.yolo_weights).suffix == ".onnx":
+        output_video_path = Path(args.output_dir) / "output_tracking——onnx.mp4"
+    elif  Path(args.yolo_weights).suffix == ".pt":
+        output_video_path = Path(args.output_dir) / "output_tracking——pt.mp4"
     out = cv2.VideoWriter(str(output_video_path), fourcc, fps, (width, height))
+    
+    
+    #初始化处理帧率
+    prev_time = time.time() 
+    fps = 0                  
+    frame_count = 0  
 
     # ==================  循环读取帧 ==================
     try:
@@ -65,12 +75,31 @@ def main(args):
             
             # 追踪器更新
             tracked_bboxes = tracker.update(bboxes, frame)
-            
+            print(type(frame))
             # 匹配推理结果和追踪结果，过滤轮廓
             contour_list, cls_id = seg_model.match_contours(bboxes, tracked_bboxes)
 
             # 绘制追踪结果
             frame = seg_model.draw_tracked_boxes(frame, tracked_bboxes, contour_list, cls_id)
+            
+            #计算处理帧率
+            current_time = time.time()
+            frame_count += 1
+
+            # 每 10 帧算一次平均，避免第一帧爆炸 + 平滑显示
+            if frame_count % 10 == 0:
+                # 计算 10 帧总耗时
+                dt = current_time - prev_time
+                # 真实平均帧率 = 10帧 / 耗时
+                fps = 10.0 / dt if dt > 0 else 0
+                prev_time = current_time
+
+            cv2.putText(frame, f"FPS: {fps:.1f}", 
+                (15, 40), 
+                cv2.FONT_HERSHEY_SIMPLEX, 
+                1, 
+                (0, 255, 0), 
+                2)
 
             # 保存每一帧 
             out.write(frame)
@@ -79,6 +108,8 @@ def main(args):
             cv2.imshow("Tracking", frame)
             if cv2.waitKey(10) == 27:
                 break
+            
+        #seg_model.export_onnx()
     except Exception as e:
         print(f"error: {e}")
         # 释放资源
@@ -94,8 +125,8 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--yolo_weights', type=str, default='models/yolov8n-seg.pt', help='model.pt path')
-    parser.add_argument('--video_path',type=str,default='test.mp4',help='path to input video')
+    parser.add_argument('--yolo_weights', type=str, default='weights/best.onnx', help='model.pt path')
+    parser.add_argument('--video_path',type=str,default='conveyor.mp4',help='path to input video')
     parser.add_argument('--class_name_yaml', type=str, default='config/class_name.yaml', help='path to class name yaml')
     parser.add_argument('--output_dir', type=str, default='output', help='directory to save output video')
     args = parser.parse_args()
