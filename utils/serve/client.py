@@ -216,7 +216,7 @@ async def send_request(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--video_path', type=str, default='conveyor.mp4', help='path to input video')
-    parser.add_argument('--url', type=str, default='http://127.0.0.1:8000', help='base URL of the API service')
+    parser.add_argument('--url', type=str, default='http://10.62.200.40:8000', help='base URL of the API service')
     parser.add_argument('--route', type=str, default='/track', choices=['/health','/track', '/track_multiple'], help='API route to use')
     parser.add_argument('--timeout', type=int, default=30, help='request timeout in seconds')
     args = parser.parse_args()

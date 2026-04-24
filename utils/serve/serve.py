@@ -79,7 +79,7 @@ class SystemStatus(BaseModel):
 
 
 # 全局变量
-model_path = "weights/best.pt"
+model_path = "weights/best.onnx"
 class_yaml = "config/class_name.yaml"
 start_time = time.time()
 
@@ -297,4 +297,4 @@ async def track_multiple(request: ImageRequest):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
